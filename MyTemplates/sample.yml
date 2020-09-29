@@ -1,0 +1,148 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: AWS CFN to build compute components of the environment.
+Parameters:
+  SERVERAMI:
+    Description: AMI ID of WEB Server to be launched.
+    Type: String
+    Default: ami-0f93a55913b1674e5
+  MERANETINSTANCETYPE:
+    Description: Instance Type of the WEB Server
+    Type: String
+    Default: t3.xlarge
+    AllowedValues:
+    - t2.micro
+    - t3.medium
+    - t3.xlarge
+  MERAPLANNERINSTANCETYPE:
+    Description: Instance Type of the WEB Server
+    Type: String
+    Default: t3.xlarge
+    AllowedValues:
+    - t2.micro
+    - t3.medium
+    - t3.xlarge
+  MERANETINSTANCEAZ:
+    Description: Enter the availability zone
+    Default: "-"
+    Type: AWS::EC2::AvailabilityZone::Name
+  MERAPLANNERINSTANCEAZ:
+    Description: Enter the availability zone
+    Default: "-"
+    Type: AWS::EC2::AvailabilityZone::Name
+Resources:
+  MERANETSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: MERANETSG
+      GroupDescription: SG for App Servers
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: 10.0.0.113/32
+      VpcId:
+        Fn::ImportValue: DEV-VPC
+      Tags:
+      - Key: Name
+        Value: DEV-MERANET-SG
+      - Key: Project
+        Value:
+          Fn::ImportValue: DEV-PROJECT-NAME
+      - Key: Environment
+        Value:
+          Fn::ImportValue: DEV-ENVIRONMENT-TYPE
+  MERAPLANNERSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupName: MERAPLANNERSG
+      GroupDescription: SG for App Servers
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: '3389'
+        ToPort: '3389'
+        CidrIp: 10.0.0.113/32
+      VpcId:
+        Fn::ImportValue: DEV-VPC
+      Tags:
+      - Key: Name
+        Value: DEV-MERAPLANNER-SG
+      - Key: Project
+        Value:
+          Fn::ImportValue: DEV-PROJECT-NAME
+      - Key: Environment
+        Value:
+          Fn::ImportValue: DEV-ENVIRONMENT-TYPE
+  MERANETINSTANCE:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone:
+        Ref: MERANETINSTANCEAZ
+      ImageId:
+        Ref: SERVERAMI
+      InstanceType:
+        Ref: MERANETINSTANCETYPE
+      KeyName: DEV-MERANET-SERVER-KEY
+      Tags:
+      - Key: Name
+        Value: DEV-MERANET-SERVER
+      - Key: Project
+        Value:
+          Fn::ImportValue: DEV-PROJECT-NAME
+      - Key: Environment
+        Value:
+          Fn::ImportValue: DEV-ENVIRONMENT-TYPE
+      NetworkInterfaces:
+      - GroupSet:
+        - Ref: MERANETSG
+        AssociatePublicIpAddress: 'true'
+        DeviceIndex: '0'
+        SubnetId:
+          Fn::ImportValue: DEV-PUBLIC-SUBNET-1
+  MERAPLANNERINSTANCE:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone:
+        Ref: MERAPLANNERINSTANCEAZ
+      ImageId:
+        Ref: SERVERAMI
+      InstanceType:
+        Ref: MERAPLANNERINSTANCETYPE
+      KeyName: DEV-MERAPLANNER-SERVER-KEY
+      Tags:
+      - Key: Name
+        Value: DEV-MERAPLANNER-SERVER
+      - Key: Project
+        Value:
+          Fn::ImportValue: DEV-PROJECT-NAME
+      - Key: Environment
+        Value:
+          Fn::ImportValue: DEV-ENVIRONMENT-TYPE
+      NetworkInterfaces:
+      - GroupSet:
+        - Ref: MERAPLANNERSG
+        AssociatePublicIpAddress: 'true'
+        DeviceIndex: '0'
+        SubnetId:
+          Fn::ImportValue: DEV-PUBLIC-SUBNET-2
+Outputs:
+  MERANET:
+    Value:
+      Ref: MERANETINSTANCE
+    Export:
+      Name: DEV-MERANET-SERVER
+  MERAPLANNER:
+    Value:
+      Ref: MERAPLANNERINSTANCE
+    Export:
+      Name: DEV-MERAPLANNER-SERVER
+  MERANETSG1:
+    Value:
+      Ref: MERANETSG
+    Export:
+      Name: DEV-MERANET-SG
+  MERAPLANNERSG1:
+    Value:
+      Ref: MERAPLANNERSG
+    Export:
+      Name: DEV-MERAPLANNER-SG

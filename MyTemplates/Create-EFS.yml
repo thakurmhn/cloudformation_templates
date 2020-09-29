@@ -1,0 +1,93 @@
+
+Parameters:
+
+  MYINSTANCEAZ:
+    Description: Enter the availability zone
+    Default: us-east-1a
+    #Type: AWS::EC2::AvailabilityZone::Name
+    Type: String
+    AllowedValues:
+      - us-east-1a
+      - us-east-1b
+
+  MYVPC:
+    Description: VPC to operate in
+    #Type: AWS::EC2::VPC::Id
+    Type: String
+    Default: vpc-0abe4a4740eb0e685
+    AllowedValues:
+      - vpc-0abe4a4740eb0e685
+
+  MYSUBNETID:
+    Type: AWS::EC2::Subnet::Id
+    Description: SubnetId of an existing subnet (for the primary network) in your
+      Virtual Private Cloud (VPC)
+    ConstraintDescription: must be an existing subnet in the selected Virtual Private Cloud.
+
+  SecurityGroupIngressCIDR:
+    Description: The IP address range that can be used to communicate to the EC2 instances
+    Type: String
+    MinLength: '9'
+    MaxLength: '18'
+    Default: 10.0.0.0/16
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/(\d{1,2})
+    ConstraintDescription: must be a valid IP CIDR range of the form x.x.x.x/x.
+
+  FilesystemPerformanceSelect:
+    Description: Choose filesystem performane mode.
+    Type: String
+    Default: generalPurpose
+    AllowedValues:
+      - generalPurpose
+      - maxIO
+
+#Mappings:
+
+
+#Conditions:
+
+Resources:
+
+  MYEFSSG:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref MYVPC
+      GroupDescription: SG to allow efs connections
+      SecurityGroupIngress:
+      - IpProtocol: tcp
+        FromPort: 2049
+        ToPort: 2049
+        CidrIp: !Ref SecurityGroupIngressCIDR
+
+  FileSystemResource:
+    Type: 'AWS::EFS::FileSystem'
+    Properties:
+      BackupPolicy:
+        Status: ENABLED
+      PerformanceMode: !Ref FilesystemPerformanceSelect
+      Encrypted: true
+      LifecyclePolicies:
+        - TransitionToIA: AFTER_30_DAYS
+      FileSystemTags:
+        - Key: Name
+          Value: TestFileSystem
+
+  MountTargetResource1:
+    Type: AWS::EFS::MountTarget
+    Properties:
+      FileSystemId: !Ref FileSystemResource
+      SubnetId: !Ref MYSUBNETID
+      SecurityGroups: [!Ref MYEFSSG]
+
+Outputs:
+
+  TargetEFSId:
+    Value: !Ref FileSystemResource
+    Export:
+      Name: MYEFSID
+
+  OurMountTarget:
+    Description: IPaddress to be used to mount EFS
+    Value: !GetAtt MountTargetResource1.IpAddress
+    Export:
+      Name:  IPMOUNTTARGET

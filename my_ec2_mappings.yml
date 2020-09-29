@@ -1,0 +1,67 @@
+Parameters:
+  EnvironmentToVPC:
+    Description: Environment VPC
+    Type: String
+    AllowedValues: [default, custom]
+    ConstraintDescription: must be default or custom
+  EnvCustomPrivateSubnet:
+    Description: Private Subnet name
+    Type: String
+    AllowedValues: [PrivateA, PrivateB]
+  EnvCustomPublicSubnet:
+    Description: Public Subnet name
+    Type: String
+    AllowedValues: [PublicA, PublicB]
+  EnvDefaultSubnet:
+    Description: Default Subnet name
+    Type: String
+    AllowedValues: [DefaultA]
+
+Mappings:
+  EnvironmentToVPC:
+    default:
+      VPCId: vpc-e4add19e
+    custom:
+      VPCId: vpc-0abe4a4740eb0e685
+
+  CustomPrivateSubnetA:
+    PrivateA:
+      SubnetId: subnet-026590451e637dfe8
+#  CustomePrivateSubnetB:
+#    PrivateB:
+#      SubnetId: subnet-056fd444ebb0ef62b
+  CustomPublicSubnetA:
+    PublicA:
+      SubnetId: subnet-0d4c1b3f3800c5ccf
+#  CustomPublicSubnetB:
+#    PublicB:
+#      SubetId: subnet-0553207fa66365920
+
+  DefaultSubnet:
+    DefaultA:
+      SubnetId: subnet-6f684641
+
+Conditions:
+  UseVPCCondCustome: !Equals [ !Ref EnvironmentToVPC, custom ]
+  UseVPCDefault: !Equals [ !Ref EnvironmentToVPC, default ]
+  UseDefaultSubnetCond: !And
+    - !Equals [ !Ref EnvDefaultSubnet, DefaultA ]
+    - !Condition UseVPCDefault
+  UseCustomPrivateACond: !And
+    - !Equals [ !Ref EnvCustomPrivateSubnet, PrivateA ]
+    - !Condition UseVPCCondCustome
+  UseCustomPublicACond: !And
+    - !Equals [ !Ref EnvCustomPublicSubnet, PublicA ]
+    - !Condition UseVPCCondCustome
+
+Resources:
+  MyEC2Instance:
+    Type: AWS::EC2::Instance
+    Properties:
+      AvailabilityZone: us-east-1a
+      ImageId: ami-a4c7edb2
+      InstanceType: t2.micro
+      SubnetId: !If [UseDefaultSubnetCond,
+          !FindInMap [DefaultSubnet, !Ref 'EnvDefaultSubnet', SubnetId],
+          !FindInMap [CustomPublicSubnetA, !Ref 'EnvCustomPublicSubnet', SubnetId]
+          ]
